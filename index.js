@@ -242,9 +242,8 @@ module.exports = function meddleware(settings, refresh) {
         //remove existing middelwares added by meddleware last time
         parent._router.stack.splice(startIndex, count);
         count = 0;
-        //Store all other middleware added by application + 3 middleware 
-        // we added
-        var tempArr = parent._router.stack.splice(startIndex + 3);
+        //Store all other middleware added by application
+        var tempArr = parent._router.stack.splice(startIndex);
         util
             .mapValues(settings, util.nameObject)
             .filter(thing.isObject)
