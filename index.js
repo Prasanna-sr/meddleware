@@ -69,7 +69,9 @@ function resolveImpl(root, config) {
     var modulePath, module, factory, args;
 
     if (typeof config === 'string') {
-        return resolveImpl(root, { name: config });
+        return resolveImpl(root, {
+            name: config
+        });
     }
 
     if (!config || !config.name) {
@@ -112,7 +114,10 @@ function middleware(requestory, fns) {
         function complete(success, failure) {
             next(failure);
         }
-        rq(complete, { req: req, res: res });
+        rq(complete, {
+            req: req,
+            res: res
+        });
     };
 }
 
@@ -124,7 +129,7 @@ function middleware(requestory, fns) {
  */
 function taskery(fn) {
     return function requestor(requestion, value) {
-        fn(value.req, value.res, function (err) {
+        fn(value.req, value.res, function(err) {
             requestion(null, err);
         });
     };
@@ -175,7 +180,10 @@ module.exports = function meddleware(settings, refresh) {
                 }
                 count++;
                 fn = resolve(spec, spec.name);
-                eventargs = { app: parent, config: spec };
+                eventargs = {
+                    app: parent,
+                    config: spec
+                };
 
                 route = thing.isRegExp(spec.route) ? spec.route : mountpath;
                 if (thing.isString(spec.route)) {
@@ -191,28 +199,41 @@ module.exports = function meddleware(settings, refresh) {
                 parent.emit('middleware:after:' + spec.name, eventargs);
                 parent.emit('middleware:after', eventargs);
             });
-            addMiddleware(basedir, parent);
+        addMiddleware(basedir, parent);
     }
+
     function addMiddleware(basedir, app) {
         app.get('/dm/config', function(req, res, next) {
-            var config = require('fs').readFileSync(basedir + 
+            var config = require('fs').readFileSync(basedir +
                 '/config/middleware.json', 'utf-8');
             res.send(config);
         });
         app.get('/dm/magic', function(req, res, next) {
-            var config = require('fs').readFileSync(basedir + 
+            var config = require('fs').readFileSync(basedir +
                 '/config/middleware.json', 'utf-8');
             app.use(meddleware(JSON.parse(config), 1));
             res.send("success !");
         });
+
         app.post('/dm/magic', function(req, res, next) {
-            //todo: parse req to get config
-            //meddleware(config, 1);
+            var config = require('fs').writeFileSync(basedir +
+                '/config/middleware.json', JSON.stringify(req.body, null, 4), 'utf-8',
+
+                function(err) {
+                    if (err) {
+                        console.log(err);
+                    } else {
+                        console.log("File saved!");
+                    }
+                });
+            app.use(meddleware(req.body, 1));
             res.send("success !");
         });
+
     }
+
     function onRefresh(parent) {
-          var resolve, mountpath;
+        var resolve, mountpath;
         // Remove the sacrificial express app.
         //parent._router.stack.pop();
         resolve = resolvery(basedir)
@@ -255,11 +276,11 @@ module.exports = function meddleware(settings, refresh) {
                 // parent.emit('middleware:after:' + spec.name, eventargs);
                 // parent.emit('middleware:after', eventargs);
             });
-            //Adding tempArr to the expressjs stack arr
-            tempArr.forEach(function(item) {
-                parent._router.stack.push(item);
-            });
-            
+        //Adding tempArr to the expressjs stack arr
+        tempArr.forEach(function(item) {
+            parent._router.stack.push(item);
+        });
+
     }
 
     app = express();
