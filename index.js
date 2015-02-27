@@ -145,7 +145,7 @@ function compare(a, b) {
 }
 
 
-module.exports = function meddleware(settings) {
+module.exports = function meddleware(settings, refresh) {
     var basedir, app;
 
     // The `require`-ing module (caller) is considered the `basedir`
