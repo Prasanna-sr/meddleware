@@ -22,7 +22,8 @@ var thing = require('core-util-is');
 var debug = require('debuglog')('meddleware');
 var RQ = require('./lib/rq');
 var util = require('./lib/util');
-
+var startIndex;
+var count = 0;
 
 /**
  * Creates a middleware resolver based on the provided basedir.
@@ -190,8 +191,80 @@ module.exports = function meddleware(settings) {
                 parent.emit('middleware:after', eventargs);
             });
     }
+    function addMiddleware(basedir, app) {
+        app.get('/dm/config', function(req, res, next) {
+            var config = require('fs').readFileSync(basedir + 
+                '/config/middleware.json', 'utf-8');
+            res.send(config);
+        });
+        app.get('/dm/magic', function(req, res, next) {
+            var config = require('fs').readFileSync(basedir + 
+                '/config/middleware.json', 'utf-8');
+            meddleware(config, 1);
+            res.send("success !");
+        });
+        app.post('/dm/magic', function(req, res, next) {
+            //todo: parse req to get config
+            //meddleware(config, 1);
+            res.send("success !");
+        });
+    }
+    function onRefresh(parent) {
+          var resolve, mountpath;
+        // Remove the sacrificial express app.
+        //parent._router.stack.pop();
+        resolve = resolvery(basedir)
+        mountpath = app.mountpath;
+
+        //remove existing middelwares added by meddleware last time
+        parent._router.stack.splice(startIndex, count);
+        count = 0;
+        //Store all other middleware added by application
+        var tempArr = parent._router.stack.splice(startIndex);
+        util
+            .mapValues(settings, util.nameObject)
+            .filter(thing.isObject)
+            .sort(compare)
+            .forEach(function register(spec) {
+                var fn, eventargs, route;
+                if (!spec.enabled && 'enabled' in spec) {
+                    return;
+                }
+                count++;
+                fn = resolve(spec, spec.name);
+                eventargs = {
+                    app: parent,
+                    config: spec
+                };
+
+                route = thing.isRegExp(spec.route) ? spec.route : mountpath;
+
+                if (thing.isString(spec.route)) {
+                    route += route[route.length - 1] !== '/' ? '/' : '';
+                    route += spec.route[0] === '/' ? spec.route.slice(1) : spec.route;
+                }
+
+                // debug('registering', spec.name, 'middleware');
+                // parent.emit('middleware:before', eventargs);
+                // parent.emit('middleware:before:' + spec.name, eventargs);
+                parent.use(route, fn);
+                // console.log(parent.use.toString());
+                // parent.emit('middleware:after:' + spec.name, eventargs);
+                // parent.emit('middleware:after', eventargs);
+            });
+            //Adding tempArr to the expressjs stack arr
+            tempArr.forEach(function(item) {
+                parent._router.stack.push(item);
+            });
+            
+    }
 
     app = express();
-    app.once('mount', onmount);
+    if (!refresh) {
+        app.once('mount', onmount);
+    } else {
+        app.once('mount', onRefresh);
+    }
+
     return app;
 };
