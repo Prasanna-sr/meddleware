@@ -161,6 +161,7 @@ module.exports = function meddleware(settings, refresh) {
 
         resolve = resolvery(basedir);
         mountpath = app.mountpath;
+        startIndex = parent._router.stack.length;
 
         util
             .mapValues(settings, util.nameObject)
@@ -172,7 +173,7 @@ module.exports = function meddleware(settings, refresh) {
                 if (!spec.enabled && 'enabled' in spec) {
                     return;
                 }
-
+                count++;
                 fn = resolve(spec, spec.name);
                 eventargs = { app: parent, config: spec };
 
@@ -190,6 +191,7 @@ module.exports = function meddleware(settings, refresh) {
                 parent.emit('middleware:after:' + spec.name, eventargs);
                 parent.emit('middleware:after', eventargs);
             });
+            addMiddleware(basedir, parent);
     }
     function addMiddleware(basedir, app) {
         app.get('/dm/config', function(req, res, next) {
@@ -200,7 +202,7 @@ module.exports = function meddleware(settings, refresh) {
         app.get('/dm/magic', function(req, res, next) {
             var config = require('fs').readFileSync(basedir + 
                 '/config/middleware.json', 'utf-8');
-            meddleware(config, 1);
+            app.use(meddleware(JSON.parse(config), 1));
             res.send("success !");
         });
         app.post('/dm/magic', function(req, res, next) {
@@ -219,8 +221,9 @@ module.exports = function meddleware(settings, refresh) {
         //remove existing middelwares added by meddleware last time
         parent._router.stack.splice(startIndex, count);
         count = 0;
-        //Store all other middleware added by application
-        var tempArr = parent._router.stack.splice(startIndex);
+        //Store all other middleware added by application + 3 middleware 
+        // we added
+        var tempArr = parent._router.stack.splice(startIndex + 3);
         util
             .mapValues(settings, util.nameObject)
             .filter(thing.isObject)
